@@ -1,3 +1,4 @@
 compiled_code.json
 env
 .vscode
+.env
