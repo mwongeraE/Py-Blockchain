@@ -39,10 +39,12 @@ bytecode = compiled_sol["contracts"]["SimpleStorage.sol"]["SimpleStorage"]["evm"
 # get abi
 abi = compiled_sol["contracts"]["SimpleStorage.sol"]["SimpleStorage"]["abi"]
 
-# for connecting to ganache
-w3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
-chain_id = 1337
-my_address = "0x15454270f2A911e4EC0c686e630F4C1ed08885eb"
+# for connecting to ganache 1.1 Sepolia
+w3 = Web3(
+    Web3.HTTPProvider("https://sepolia.infura.io/v3/e5644cfc9d10462d929c9160b56fdd84")
+)
+chain_id = 11155111
+my_address = "0x8e98CC3BE969B8171626bCf51ff747971fcd8fbe"
 private_key = os.getenv("private_key")
 
 # Create the contract in py
@@ -60,5 +62,30 @@ transaction = SimpleStorage.constructor().build_transaction(
 )
 
 signed_txn = w3.eth.account.sign_transaction(transaction, private_key=private_key)
+# Send this signed transactions
+print("Deploying contract ...")
 
-print(transaction)
+tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+print("Deployed")
+# Working with contract
+# Contract abi
+# Contract address
+simple_storage = w3.eth.contract(address=tx_receipt.contractAddress, abi=abi)
+
+# Call -> simulate making a call and getting a return value
+# transact -> Actually make a state change
+
+# Initial value of favorite number
+print(simple_storage.functions.retrieve().call())
+print("Updating contract ...")
+store_transaction = simple_storage.functions.store(15).build_transaction(
+    {"chainId": chain_id, "from": my_address, "nonce": nonce + 1}
+)
+signed_store_txn = w3.eth.account.sign_transaction(
+    store_transaction, private_key=private_key
+)
+send_store_tx = w3.eth.send_raw_transaction(signed_store_txn.rawTransaction)
+tx_receipt = w3.eth.wait_for_transaction_receipt(send_store_tx)
+print("Updated")
+print(simple_storage.functions.retrieve().call())
